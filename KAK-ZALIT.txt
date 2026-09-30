@@ -1,0 +1,10 @@
+Uchet SI — GitHub Pages
+
+Stariy sayt byl belyy, potomu chto ne bylo papki assets i puti byli /assets/...
+Seychas CSS i JS vshity v index.html. Papka assets ne nuzhna.
+
+1. Udalite starye fayly v repo Uchet-si.
+2. Zaleyte VSE iz arhiva v koren repo.
+3. Otkroyte https://denis-coder.github.io/Uchet-si/  (Ctrl+F5)
+4. Dolzhen byt TEMNYY ekran.
+5. 'Ukazat fayl Excel' otkroet zhurnal posle vybora .xlsx
