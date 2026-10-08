@@ -1,29 +1,1414 @@
 <!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Учёт СИ</title>
-    <meta name="theme-color" content="#e8eef4" />
-    <meta name="description" content="Журнал средств измерений: Excel, QR, поверка, общая база, история." />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Учёт СИ" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-    <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./css/app.css" />
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="./js/app.js"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {})
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Учёт СИ</title>
+  <meta name="theme-color" content="#e8eef4" />
+  <meta name="description" content="Журнал средств измерений: Excel, QR, поверка, общая база, история." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Учёт СИ" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <style>
+:root {
+  --bg: #e8eef4;
+  --surface: #fff;
+  --fg: #1b2430;
+  --muted: #5b6b7c;
+  --subtle: #8a9aab;
+  --primary: #2563eb;
+  --primary-h: #1d4ed8;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --warn: #d97706;
+  --warn-soft: #fffbeb;
+  --ok: #16a34a;
+  --ok-soft: #f0fdf4;
+  --border: rgba(15, 23, 42, 0.1);
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --r: 14px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+  line-height: 1.45;
+}
+* { box-sizing: border-box; }
+html, body, #app { margin: 0; min-height: 100%; background: var(--bg); }
+body { -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+.shell { max-width: 520px; margin: 0 auto; min-height: 100dvh; padding: 14px 12px 40px; }
+.card {
+  background: var(--surface);
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 44px; padding: 0 14px; border-radius: 12px; border: none; font-weight: 600;
+  transition: transform .08s, background .15s;
+}
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-h); }
+.btn-sec { background: #eef2f7; color: var(--fg); }
+.btn-danger { background: var(--danger-soft); color: var(--danger); }
+.btn-block { width: 100%; }
+.input {
+  width: 100%; height: 44px; padding: 0 12px; border-radius: 12px;
+  border: 1px solid var(--border); background: #fff; outline: none;
+}
+.input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+.label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.row { display: flex; gap: 8px; align-items: center; }
+.muted { color: var(--muted); }
+.subtle { color: var(--subtle); }
+.badge {
+  display: inline-flex; align-items: center; padding: 2px 8px;
+  border-radius: 999px; font-size: 12px; font-weight: 600;
+}
+.badge-ok { background: var(--ok-soft); color: var(--ok); }
+.badge-soon { background: var(--warn-soft); color: var(--warn); }
+.badge-overdue { background: var(--danger-soft); color: var(--danger); }
+.badge-na { background: #f1f5f9; color: var(--muted); }
+.tabs {
+  display: flex; gap: 4px; background: #dde5ee; padding: 4px; border-radius: 12px;
+}
+.tab {
+  flex: 1; height: 36px; border: none; border-radius: 10px;
+  background: transparent; color: var(--muted); font-weight: 600; font-size: 13px;
+}
+.tab.active { background: #fff; color: var(--fg); box-shadow: var(--shadow); }
+.inst {
+  text-align: left; width: 100%; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 14px; box-shadow: var(--shadow);
+}
+.inst.overdue { background: var(--danger-soft); }
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  background: #111827; color: #fff; padding: 10px 16px; border-radius: 12px;
+  font-size: 14px; z-index: 200; max-width: 90vw;
+}
+.empty { text-align: center; color: var(--muted); padding: 28px 12px; }
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 50;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.modal {
+  width: 100%; max-width: 520px; max-height: 92dvh; overflow: auto;
+  background: var(--surface); border-radius: 18px 18px 0 0; padding: 16px;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  height: 32px; padding: 0 10px; border-radius: 999px; border: none;
+  font-size: 12px; font-weight: 600; background: #eef2f7; color: var(--fg);
+}
+.chip.on { background: var(--primary); color: #fff; }
+.stat {
+  background: var(--surface); border-radius: 12px; padding: 10px 12px;
+  border: 1px solid var(--border); flex: 1; min-width: 90px;
+}
+.stat b { display: block; font-size: 18px; }
+.stat span { font-size: 11px; color: var(--muted); }
+h1,h2 { margin: 0; }
+.sync-ok { color: var(--ok); font-size: 12px; }
+.sync-warn { color: var(--danger); font-size: 12px; }
+select.input { appearance: auto; }
+
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+/** Правила поверки: манометр — 1 год, термометр биметаллический — 2 года */
+
+function isTracked(name) {
+  const n = String(name || '').toLowerCase().replace(/ё/g, 'е')
+  if (n.includes('манометр')) return true
+  if (n.includes('термометр') && n.includes('биметалл')) return true
+  return false
+}
+
+function isManometer(name) {
+  return String(name || '').toLowerCase().replace(/ё/g, 'е').includes('манометр')
+}
+
+function isBimetal(name) {
+  const n = String(name || '').toLowerCase().replace(/ё/g, 'е')
+  return n.includes('термометр') && n.includes('биметалл')
+}
+
+function defaultIntervalMonths(name) {
+  return isBimetal(name) ? 24 : 12
+}
+
+/** Парсинг: 10.10.2024 | 24ДЯУ | ДЯУ24 | 3К24 | 24ДЯУ2К */
+function parseCheckDate(raw) {
+  if (raw == null || !String(raw).trim()) return null
+  const s = String(raw).trim()
+
+  const m1 = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{2,4})$/)
+  if (m1) {
+    const d = +m1[1], mo = +m1[2] - 1
+    const y = +m1[3] < 100 ? 2000 + +m1[3] : +m1[3]
+    const dt = new Date(y, mo, d)
+    return isNaN(dt.getTime()) ? null : dt
+  }
+
+  const iso = Date.parse(s)
+  if (!isNaN(iso) && /^\d{4}/.test(s)) return new Date(iso)
+
+  const upper = s.toUpperCase().replace(/\s/g, '').replace(/K/g, 'К')
+
+  // 24ДЯУ2К / 24ДЯУ / ДЯУ24
+  const dyau = upper.match(/(?:(\d{2})ДЯУ|ДЯУ(\d{2}))(?:(\d)К)?/)
+  if (dyau) {
+    const yy = 2000 + parseInt(dyau[1] || dyau[2], 10)
+    if (dyau[3]) {
+      const q = +dyau[3]
+      return new Date(yy + 1, q * 3, 0) // end of quarter next year
+    }
+    return new Date(yy + 1, 11, 31)
+  }
+
+  // 3К24 / 24К3
+  const kq = upper.match(/(?:(\d)К(\d{2})|(\d{2})К(\d))/)
+  if (kq) {
+    const q = +(kq[1] || kq[4])
+    const yy = 2000 + parseInt(kq[2] || kq[3], 10)
+    return new Date(yy + 1, q * 3, 0)
+  }
+
+  if (/^\d{2}$/.test(upper)) return new Date(2000 + +upper + 1, 11, 31)
+  return null
+}
+
+function addMonths(date, months) {
+  const d = new Date(date)
+  d.setMonth(d.getMonth() + months)
+  return d
+}
+
+function formatDue(d) {
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  return `до ${dd}.${mm}.${d.getFullYear()}`
+}
+
+const SOON_DAYS = 30
+
+function getStatus(inst, now = new Date()) {
+  if (!isTracked(inst.name)) {
+    return { status: 'na', due: null, label: 'не контролируется', tracked: false }
+  }
+  const parsed = parseCheckDate(inst.lastCheck)
+  if (!parsed) {
+    return {
+      status: 'unknown',
+      due: null,
+      label: inst.lastCheck ? String(inst.lastCheck) : 'нет даты',
+      tracked: true,
+    }
+  }
+  const months = inst.intervalMonths ?? defaultIntervalMonths(inst.name)
+  // Для кодов ДЯУ/К срок уже «годен до» в parseCheckDate (клеймо+1 год).
+  // Для обычной даты lastCheck = дата поверки → + interval.
+  const isCode = /[ДдяаукКk]/i.test(String(inst.lastCheck || ''))
+  const due = isCode ? parsed : addMonths(parsed, months)
+
+  if (now.getTime() > due.getTime()) {
+    return { status: 'overdue', due, label: formatDue(due), tracked: true }
+  }
+  const soon = new Date(now)
+  soon.setDate(soon.getDate() + SOON_DAYS)
+  if (due.getTime() <= soon.getTime()) {
+    return { status: 'soon', due, label: formatDue(due), tracked: true }
+  }
+  return { status: 'ok', due, label: formatDue(due), tracked: true }
+}
+
+function statusLabel(status, checkKind) {
+  const kind = /к/i.test(checkKind || '') ? 'Калибровка' : 'Поверка'
+  switch (status) {
+    case 'ok': return 'Годен'
+    case 'soon': return `${kind} истекает`
+    case 'overdue': return `${kind} просрочена`
+    case 'unknown': return 'Без даты'
+    default: return 'Не контролируется'
+  }
+}
+
+/** Хэш пароля (PBKDF2) — только в браузере, без сервера */
+
+function bufToHex(buf) {
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+function hexToBuf(hex) {
+  const a = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < a.length; i++) a[i] = parseInt(hex.substr(i * 2, 2), 16)
+  return a.buffer
+}
+
+async function hashPassword(password, saltHex) {
+  const enc = new TextEncoder()
+  const salt = saltHex
+    ? hexToBuf(saltHex)
+    : crypto.getRandomValues(new Uint8Array(16)).buffer
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits'],
+  )
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    256,
+  )
+  return {
+    salt: bufToHex(salt),
+    hash: bufToHex(bits),
+  }
+}
+
+async function verifyPassword(password, saltHex, hashHex) {
+  const { hash } = await hashPassword(password, saltHex)
+  return hash === hashHex
+}
+
+
+const ALIASES = {
+  name: ['наименование', 'название', 'name'],
+  type: ['тип', 'type'],
+  serial: ['заводской', 'заводской номер', 'зав', 'serial'],
+  year: ['год', 'год выпуска', 'year'],
+  range: ['диапазон', 'range'],
+  accuracyClass: ['класс', 'класс точности', 'class'],
+  location: ['место', 'место установки', 'location'],
+  object: ['объект', 'object'],
+  shop: ['цех', 'shop'],
+  unit: ['установка', 'unit'],
+  interval: ['интервал', 'межповерочный', 'mpi'],
+  lastCheck: ['дата', 'дата поверки', 'дата последней', 'поверка', 'lastcheck'],
+  checkKind: ['п/к', 'поверка/калибровка', 'вид', 'checkkind'],
+  note: ['примечание', 'note', 'комментарий'],
+}
+
+function norm(s) {
+  return String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim()
+}
+
+function mapHeader(h) {
+  const x = norm(h)
+  for (const [field, list] of Object.entries(ALIASES)) {
+    if (list.some((a) => x.includes(a) || a.includes(x))) return field
+  }
+  return null
+}
+
+function cellStr(v) {
+  if (v == null) return ''
+  if (v instanceof Date) {
+    return `${String(v.getDate()).padStart(2, '0')}.${String(v.getMonth() + 1).padStart(2, '0')}.${v.getFullYear()}`
+  }
+  return String(v).trim()
+}
+
+function parseInterval(raw) {
+  if (raw == null || raw === '') return null
+  if (typeof raw === 'number' && !isNaN(raw)) return Math.round(raw)
+  const m = String(raw).match(/(\d+)/)
+  return m ? parseInt(m[1], 10) : null
+}
+
+async function parseExcelFile(file) {
+  const XLSX = window.XLSX
+  if (!XLSX) throw new Error('Библиотека Excel не загружена')
+  const buf = await file.arrayBuffer()
+  const wb = XLSX.read(buf, { type: 'array', cellDates: true })
+  const instruments = []
+  const sheets = []
+
+  for (const sheetName of wb.SheetNames) {
+    const sheet = wb.Sheets[sheetName]
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false })
+    if (!rows.length) continue
+
+    let headerIdx = 0
+    for (let i = 0; i < Math.min(15, rows.length); i++) {
+      const texts = (rows[i] || []).filter((c) => typeof c === 'string' && String(c).length > 1).length
+      if (texts >= 3) { headerIdx = i; break }
+    }
+    const headers = (rows[headerIdx] || []).map((h) => String(h || ''))
+    const mapping = headers.map(mapHeader)
+    if (!mapping.some((m) => m === 'name' || m === 'serial')) continue
+
+    sheets.push(sheetName)
+    for (let r = headerIdx + 1; r < rows.length; r++) {
+      const row = rows[r] || []
+      const obj = {}
+      mapping.forEach((f, i) => { if (f) obj[f] = cellStr(row[i]) })
+      if (!obj.name && !obj.serial) continue
+      const name = obj.name || ''
+      instruments.push({
+        id: crypto.randomUUID(),
+        name,
+        type: obj.type || '',
+        serial: obj.serial || '',
+        year: obj.year || '',
+        range: obj.range || '',
+        accuracyClass: obj.accuracyClass || '',
+        location: obj.location || '',
+        object: obj.object || '',
+        shop: obj.shop || '',
+        unit: obj.unit || '',
+        intervalMonths: parseInterval(obj.interval) ?? (name ? defaultIntervalMonths(name) : null),
+        lastCheck: obj.lastCheck || '',
+        checkKind: obj.checkKind || '',
+        note: obj.note || '',
+        sheet: sheetName,
+      })
+    }
+  }
+  return { instruments, sheets }
+}
+
+function exportExcel(instruments, fileName = 'uchet-si.xlsx') {
+  const XLSX = window.XLSX
+  const data = instruments.map((i, idx) => ({
+    '№': idx + 1,
+    Наименование: i.name,
+    Тип: i.type,
+    'Заводской номер': i.serial,
+    'Год выпуска': i.year,
+    Диапазон: i.range,
+    Класс: i.accuracyClass,
+    'Место установки': i.location,
+    Объект: i.object,
+    Цех: i.shop,
+    Установка: i.unit,
+    'Интервал, мес.': i.intervalMonths ?? '',
+    'Дата поверки/калибровки': i.lastCheck,
+    'П/К': i.checkKind,
+    Примечание: i.note,
+    Лист: i.sheet,
+  }))
+  const ws = XLSX.utils.json_to_sheet(data)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'СИ')
+  XLSX.writeFile(wb, fileName)
+}
+
+/** CSV 14 полей для QR */
+function instrumentToQr(inst) {
+  const cols = [
+    '', inst.name, inst.type, inst.serial, inst.year, inst.range,
+    inst.accuracyClass, inst.location, inst.object, inst.shop, inst.unit,
+    inst.intervalMonths ?? '', inst.lastCheck, inst.checkKind,
+  ]
+  return cols.map((c) => {
+    const s = String(c ?? '')
+    return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s
+  }).join(',')
+}
+
+function parseQrPayload(text) {
+  // factory serial only or CSV
+  const t = String(text || '').trim()
+  if (!t.includes(',')) return { serial: t }
+  const parts = []
+  let cur = '', inQ = false
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i]
+    if (ch === '"') { inQ = !inQ; continue }
+    if (ch === ',' && !inQ) { parts.push(cur); cur = ''; continue }
+    cur += ch
+  }
+  parts.push(cur)
+  // map like Excel columns 1-based name at index 1...
+  return {
+    name: parts[1] || '',
+    type: parts[2] || '',
+    serial: parts[3] || parts[0] || '',
+    year: parts[4] || '',
+    range: parts[5] || '',
+    accuracyClass: parts[6] || '',
+    location: parts[7] || '',
+    object: parts[8] || '',
+    shop: parts[9] || '',
+    unit: parts[10] || '',
+    intervalMonths: parts[11] ? parseInt(parts[11], 10) : null,
+    lastCheck: parts[12] || '',
+    checkKind: parts[13] || '',
+  }
+}
+
+const CFG_KEY = 'uchet-si-github-cfg'
+
+function defaultCfg() {
+  return {
+    owner: 'Denis-coder',
+    repo: 'Uchet-si',
+    branch: 'main',
+    path: 'si-journal.json',
+    token: '',
+  }
+}
+
+function loadCfg() {
+  try {
+    const raw = localStorage.getItem(CFG_KEY)
+    if (!raw) return defaultCfg()
+    return { ...defaultCfg(), ...JSON.parse(raw) }
+  } catch {
+    return defaultCfg()
+  }
+}
+
+function saveCfg(cfg) {
+  localStorage.setItem(CFG_KEY, JSON.stringify(cfg))
+}
+
+function apiBase(cfg) {
+  return `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`
+}
+
+function rawUrl(cfg) {
+  return `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch}/${cfg.path}`
+}
+
+async function pullJournal(cfg) {
+  const url = `${rawUrl(cfg)}?t=${Date.now()}`
+  const res = await fetch(url, { cache: 'no-store' })
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`Не удалось загрузить с GitHub (${res.status})`)
+  const data = await res.json()
+  if (!data || !Array.isArray(data.instruments)) {
+    throw new Error('Файл на сайте повреждён')
+  }
+  return data
+}
+
+function toBase64(str) {
+  const bytes = new TextEncoder().encode(str)
+  let bin = ''
+  bytes.forEach((b) => { bin += String.fromCharCode(b) })
+  return btoa(bin)
+}
+
+async function pushJournal(cfg, journal) {
+  if (!cfg.token?.trim()) throw new Error('Нужен токен GitHub для записи')
+  const path = cfg.path.replace(/^\/+/, '')
+  const contentsUrl = `${apiBase(cfg)}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(cfg.branch)}`
+
+  let sha
+  const getRes = await fetch(contentsUrl, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${cfg.token}`,
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  })
+  if (getRes.ok) sha = (await getRes.json()).sha
+  else if (getRes.status !== 404) {
+    const t = await getRes.text()
+    throw new Error(githubErr(getRes.status, t))
+  }
+
+  const body = {
+    message: `СИ: ${journal.instruments.length} шт., журнал ${ (journal.auditLog || []).length }`,
+    content: toBase64(JSON.stringify(journal)),
+    branch: cfg.branch,
+  }
+  if (sha) body.sha = sha
+
+  const putRes = await fetch(contentsUrl.replace(/\?ref=.*/, ''), {
+    method: 'PUT',
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${cfg.token}`,
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+  if (!putRes.ok) throw new Error(githubErr(putRes.status, await putRes.text()))
+}
+
+function githubErr(status, text) {
+  if (status === 401 || status === 403) return 'Нет права записи или неверный токен GitHub.'
+  if (status === 404) return 'Репозиторий или файл не найден.'
+  return `GitHub ${status}: ${String(text).slice(0, 160)}`
+}
+
+function canWrite(cfg) {
+  return !!(cfg.token && cfg.token.trim())
+}
+
+
+const LOCAL_KEY = 'uchet-si-journal-v2'
+const SESSION_KEY = 'uchet-si-session'
+
+function emptyJournal() {
+  return {
+    version: 2,
+    updatedAt: new Date().toISOString(),
+    users: [],
+    instruments: [],
+    auditLog: [],
+  }
+}
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY)
+    if (!raw) return emptyJournal()
+    const j = JSON.parse(raw)
+    return {
+      version: 2,
+      updatedAt: j.updatedAt || '',
+      users: Array.isArray(j.users) ? j.users : [],
+      instruments: Array.isArray(j.instruments) ? j.instruments : [],
+      auditLog: Array.isArray(j.auditLog) ? j.auditLog : [],
+    }
+  } catch {
+    return emptyJournal()
+  }
+}
+
+function saveLocal(journal) {
+  journal.updatedAt = new Date().toISOString()
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(journal))
+}
+
+function getSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function setSession(user) {
+  if (user) sessionStorage.setItem(SESSION_KEY, JSON.stringify(user))
+  else sessionStorage.removeItem(SESSION_KEY)
+}
+
+async function login(journal, login, password) {
+  const u = journal.users.find((x) => x.login.toLowerCase() === login.toLowerCase())
+  if (!u) return { error: 'Неверный логин или пароль' }
+  const ok = await verifyPassword(password, u.salt, u.passwordHash)
+  if (!ok) return { error: 'Неверный логин или пароль' }
+  const session = { login: u.login, name: u.name, role: u.role || 'worker' }
+  setSession(session)
+  return { user: session }
+}
+
+async function createUser(journal, { login, name, password, role }, actor) {
+  if (!login?.trim() || !password) throw new Error('Логин и пароль обязательны')
+  if (journal.users.some((u) => u.login.toLowerCase() === login.toLowerCase())) {
+    throw new Error('Такой логин уже есть')
+  }
+  const { salt, hash } = await hashPassword(password)
+  const user = {
+    login: login.trim(),
+    name: (name || login).trim(),
+    salt,
+    passwordHash: hash,
+    role: role || 'worker',
+  }
+  journal.users.push(user)
+  addAudit(journal, actor, {
+    action: 'user_create',
+    serial: '',
+    field: null,
+    oldValue: null,
+    newValue: user.login,
+  })
+  saveLocal(journal)
+  return user
+}
+
+async function bootstrapAdmin(journal, password, name = 'Администратор') {
+  if (journal.users.length) throw new Error('Пользователи уже есть')
+  return createUser(
+    journal,
+    { login: 'admin', name, password, role: 'admin' },
+    { login: 'admin', name, role: 'admin' },
+  )
+}
+
+function addAudit(journal, actor, entry) {
+  journal.auditLog = journal.auditLog || []
+  journal.auditLog.unshift({
+    id: crypto.randomUUID(),
+    at: new Date().toISOString(),
+    login: actor?.login || '',
+    name: actor?.name || '',
+    action: entry.action,
+    instrumentId: entry.instrumentId || null,
+    serial: entry.serial || '',
+    field: entry.field ?? null,
+    oldValue: entry.oldValue ?? null,
+    newValue: entry.newValue ?? null,
+  })
+  // keep last 2000
+  if (journal.auditLog.length > 2000) journal.auditLog.length = 2000
+}
+
+function diffInst(a, b) {
+  const fields = [
+    ['name', 'Наименование'],
+    ['type', 'Тип'],
+    ['serial', 'Заводской номер'],
+    ['year', 'Год'],
+    ['range', 'Диапазон'],
+    ['accuracyClass', 'Класс'],
+    ['location', 'Место'],
+    ['object', 'Объект'],
+    ['shop', 'Цех'],
+    ['unit', 'Установка'],
+    ['intervalMonths', 'Интервал'],
+    ['lastCheck', 'Дата поверки'],
+    ['checkKind', 'П/К'],
+    ['note', 'Примечание'],
+    ['sheet', 'Лист'],
+  ]
+  const out = []
+  for (const [k, label] of fields) {
+    const o = String(a[k] ?? '')
+    const n = String(b[k] ?? '')
+    if (o !== n) out.push({ field: label, oldValue: o, newValue: n })
+  }
+  return out
+}
+
+async function syncPull() {
+  const cfg = loadCfg()
+  const remote = await pullJournal(cfg)
+  if (!remote) return { journal: null, msg: 'На сайте ещё нет si-journal.json' }
+  const local = loadLocal()
+  // prefer newer by updatedAt
+  if (!local.updatedAt || (remote.updatedAt && remote.updatedAt >= local.updatedAt)) {
+    const j = {
+      version: 2,
+      updatedAt: remote.updatedAt,
+      users: Array.isArray(remote.users) ? remote.users : local.users,
+      instruments: remote.instruments || [],
+      auditLog: Array.isArray(remote.auditLog) ? remote.auditLog : [],
+    }
+    // never lose local users if remote has none
+    if (!j.users.length && local.users.length) j.users = local.users
+    saveLocal(j)
+    return { journal: j, msg: `Загружено ${j.instruments.length} СИ` }
+  }
+  return { journal: local, msg: 'Локальная версия новее, оставлена как есть' }
+}
+
+async function syncPush(journal) {
+  const cfg = loadCfg()
+  if (!canWrite(cfg)) throw new Error('Вставьте токен бригады в «Общая база»')
+  saveLocal(journal)
+  await pushJournal(cfg, journal)
+}
+
+function scheduleAutoPull(onUpdate) {
+  const tick = async () => {
+    try {
+      const cfg = loadCfg()
+      const remote = await pullJournal(cfg)
+      if (!remote) return
+      const local = loadLocal()
+      if (remote.updatedAt && remote.updatedAt > (local.updatedAt || '')) {
+        const j = {
+          version: 2,
+          updatedAt: remote.updatedAt,
+          users: Array.isArray(remote.users) && remote.users.length ? remote.users : local.users,
+          instruments: remote.instruments || [],
+          auditLog: Array.isArray(remote.auditLog) ? remote.auditLog : local.auditLog,
+        }
+        saveLocal(j)
+        onUpdate?.(j, true)
       }
-    </script>
-  </body>
+    } catch { /* ignore */ }
+  }
+  const id = setInterval(tick, 25000)
+  return () => clearInterval(id)
+}
+
+const $ = (s, r = document) => r.querySelector(s)
+const app = $('#app')
+
+let journal = loadLocal()
+let session = getSession()
+let tab = 'journal'
+let query = ''
+let sheetFilter = ''
+let statusFilter = 'all'
+let selected = null
+let toastTimer = null
+
+function toast(msg) {
+  let el = $('.toast')
+  if (!el) {
+    el = document.createElement('div')
+    el.className = 'toast'
+    document.body.appendChild(el)
+  }
+  el.textContent = msg
+  el.hidden = false
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { el.hidden = true }, 2800)
+}
+
+function sheets() {
+  return [...new Set(journal.instruments.map((i) => i.sheet).filter(Boolean))]
+}
+
+function filteredList() {
+  let list = journal.instruments
+  if (sheetFilter) list = list.filter((i) => i.sheet === sheetFilter)
+  const q = query.trim().toLowerCase()
+  if (q) {
+    list = list.filter(
+      (i) =>
+        i.name.toLowerCase().includes(q) ||
+        i.serial.toLowerCase().includes(q) ||
+        (i.location || '').toLowerCase().includes(q) ||
+        (i.type || '').toLowerCase().includes(q),
+    )
+  }
+  if (statusFilter !== 'all') {
+    list = list.filter((i) => getStatus(i).status === statusFilter)
+  }
+  return [...list].sort((a, b) => {
+    const ao = getStatus(a).status === 'overdue' ? 1 : 0
+    const bo = getStatus(b).status === 'overdue' ? 1 : 0
+    return bo - ao
+  })
+}
+
+function overdueStats(list) {
+  const overdue = list.filter((i) => getStatus(i).status === 'overdue')
+  return {
+    total: overdue.length,
+    man: overdue.filter((i) => isManometer(i.name)).length,
+    bim: overdue.filter((i) => isBimetal(i.name)).length,
+  }
+}
+
+function render() {
+  if (!session) {
+    renderAuth()
+    return
+  }
+  if (tab === 'history') renderHistory()
+  else if (tab === 'users' && session.role === 'admin') renderUsers()
+  else if (tab === 'cloud') renderCloud()
+  else renderJournal()
+}
+
+function renderAuth() {
+  const hasUsers = journal.users.length > 0
+  app.innerHTML = `
+    <div class="shell" style="display:flex;align-items:center">
+      <div class="card" style="width:100%">
+        <h1 style="font-size:22px">Учёт СИ</h1>
+        <p class="muted" style="margin:4px 0 16px;font-size:14px">
+          ${hasUsers ? 'Вход для работников' : 'Первый запуск: создайте администратора'}
+        </p>
+        <form id="auth-form" class="stack">
+          ${hasUsers ? `
+            <div>
+              <label class="label">Логин</label>
+              <input class="input" name="login" autocomplete="username" required />
+            </div>
+          ` : `
+            <div>
+              <label class="label">Имя администратора</label>
+              <input class="input" name="name" value="Администратор" />
+            </div>
+          `}
+          <div>
+            <label class="label">Пароль</label>
+            <input class="input" name="password" type="password" autocomplete="current-password" required />
+          </div>
+          <p id="auth-err" style="color:var(--danger);margin:0;font-size:14px;display:none"></p>
+          <button class="btn btn-primary btn-block" type="submit">
+            ${hasUsers ? 'Войти' : 'Создать администратора'}
+          </button>
+          <button type="button" class="btn btn-sec btn-block" id="btn-pull-auth">Загрузить общую базу с сайта</button>
+        </form>
+      </div>
+    </div>`
+
+  $('#auth-form').onsubmit = async (e) => {
+    e.preventDefault()
+    const fd = new FormData(e.target)
+    const errEl = $('#auth-err')
+    errEl.style.display = 'none'
+    try {
+      if (!hasUsers) {
+        await bootstrapAdmin(journal, fd.get('password'), fd.get('name') || 'Администратор')
+        journal = loadLocal()
+        session = getSession() || { login: 'admin', name: fd.get('name') || 'Администратор', role: 'admin' }
+        setSession(session)
+        toast('Администратор создан. Настройте «Общую базу».')
+        tab = 'cloud'
+        render()
+        return
+      }
+      const res = await login(journal, fd.get('login'), fd.get('password'))
+      if (res.error) {
+        errEl.textContent = res.error
+        errEl.style.display = 'block'
+        return
+      }
+      session = res.user
+      render()
+    } catch (err) {
+      errEl.textContent = err.message || String(err)
+      errEl.style.display = 'block'
+    }
+  }
+  $('#btn-pull-auth').onclick = async () => {
+    try {
+      const { journal: j, msg } = await syncPull()
+      if (j) journal = j
+      toast(msg)
+      render()
+    } catch (e) {
+      toast(e.message || String(e))
+    }
+  }
+}
+
+function header(title) {
+  const cfg = loadCfg()
+  const write = canWrite(cfg)
+  return `
+    <header class="row" style="justify-content:space-between;margin-bottom:10px">
+      <div>
+        <div style="font-weight:700;font-size:18px">${title}</div>
+        <div class="subtle" style="font-size:12px">${session.name} · ${session.login}
+          ${write ? '<span class="sync-ok"> · запись в общую базу</span>' : '<span class="sync-warn"> · только локально</span>'}
+        </div>
+      </div>
+      <button type="button" class="btn btn-sec" style="height:36px;padding:0 10px" id="btn-logout">Выйти</button>
+    </header>
+    <div class="tabs" style="margin-bottom:12px">
+      <button type="button" class="tab ${tab === 'journal' ? 'active' : ''}" data-tab="journal">Журнал</button>
+      <button type="button" class="tab ${tab === 'history' ? 'active' : ''}" data-tab="history">История</button>
+      <button type="button" class="tab ${tab === 'cloud' ? 'active' : ''}" data-tab="cloud">База</button>
+      ${session.role === 'admin' ? `<button type="button" class="tab ${tab === 'users' ? 'active' : ''}" data-tab="users">Люди</button>` : ''}
+    </div>`
+}
+
+function bindHeader() {
+  $('#btn-logout').onclick = () => { setSession(null); session = null; render() }
+  app.querySelectorAll('[data-tab]').forEach((b) => {
+    b.onclick = () => { tab = b.dataset.tab; render() }
+  })
+}
+
+function renderJournal() {
+  const list = filteredList()
+  const scope = sheetFilter
+    ? journal.instruments.filter((i) => i.sheet === sheetFilter)
+    : journal.instruments
+  const st = overdueStats(scope)
+  const sheetOpts = sheets().map((s) =>
+    `<option value="${esc(s)}" ${s === sheetFilter ? 'selected' : ''}>${esc(s)}</option>`,
+  ).join('')
+
+  app.innerHTML = `
+    <div class="shell">
+      ${header('Учёт СИ')}
+      <div class="row" style="margin-bottom:10px;flex-wrap:wrap">
+        <div class="stat"><b>${scope.length}</b><span>Всего СИ</span></div>
+        <div class="stat"><b style="color:var(--danger)">${st.total}</b><span>Просрочено</span></div>
+        <div class="stat"><b>${st.man}</b><span>Манометры</span></div>
+        <div class="stat"><b>${st.bim}</b><span>Терм. бимет.</span></div>
+      </div>
+      ${st.total ? `<p class="muted" style="font-size:12px;margin:0 0 10px">Из просроченных: манометры ${st.man}, термометры биметаллические ${st.bim}</p>` : ''}
+      <div class="row" style="margin-bottom:8px">
+        <input class="input" id="q" placeholder="Поиск: номер, название, место" value="${esc(query)}" />
+      </div>
+      <div class="row" style="margin-bottom:8px;flex-wrap:wrap">
+        <select class="input" id="sheet" style="flex:1">
+          <option value="">Все листы</option>
+          ${sheetOpts}
+        </select>
+      </div>
+      <div class="chips" style="margin-bottom:12px">
+        ${['all', 'overdue', 'soon', 'ok'].map((s) =>
+          `<button type="button" class="chip ${statusFilter === s ? 'on' : ''}" data-st="${s}">${
+            s === 'all' ? 'Все' : s === 'overdue' ? 'Просрочено' : s === 'soon' ? 'Скоро' : 'Годны'
+          }</button>`,
+        ).join('')}
+      </div>
+      <div class="row" style="margin-bottom:12px;flex-wrap:wrap">
+        <button type="button" class="btn btn-primary" style="flex:1" id="btn-excel">Excel</button>
+        <button type="button" class="btn btn-sec" style="flex:1" id="btn-qr">QR</button>
+        <button type="button" class="btn btn-sec" style="flex:1" id="btn-save-xls">Сохранить</button>
+      </div>
+      <input type="file" id="file" accept=".xlsx,.xls" hidden />
+      <div class="stack" id="list">
+        ${list.length === 0
+          ? `<div class="empty">${journal.instruments.length ? 'Ничего не найдено' : 'Загрузите Excel или общую базу'}</div>`
+          : `<div class="subtle" style="font-size:13px">Найдено: ${list.length}</div>` +
+            list.map((i) => cardHtml(i)).join('')}
+      </div>
+    </div>`
+
+  bindHeader()
+  $('#q').oninput = (e) => { query = e.target.value; render() }
+  $('#sheet').onchange = (e) => { sheetFilter = e.target.value; render() }
+  app.querySelectorAll('[data-st]').forEach((b) => {
+    b.onclick = () => { statusFilter = b.dataset.st; render() }
+  })
+  $('#btn-excel').onclick = () => $('#file').click()
+  $('#file').onchange = async (e) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    try {
+      const { instruments } = await parseExcelFile(f)
+      if (!instruments.length) { toast('В файле нет строк СИ'); return }
+      // replace or merge: replace for clean import by admin
+      if (confirm(`Загрузить ${instruments.length} СИ? Текущий перечень (${journal.instruments.length}) будет заменён.`)) {
+        journal.instruments = instruments
+        addAudit(journal, session, {
+          action: 'import',
+          serial: '',
+          newValue: `Импорт ${instruments.length} СИ из ${f.name}`,
+        })
+        saveLocal(journal)
+        await tryPush()
+        toast(`Загружено ${instruments.length} СИ`)
+        render()
+      }
+    } catch (err) {
+      toast(err.message || String(err))
+    }
+  }
+  $('#btn-save-xls').onclick = () => {
+    if (!journal.instruments.length) return toast('Нечего сохранять')
+    exportExcel(journal.instruments)
+  }
+  $('#btn-qr').onclick = () => openScanner()
+  app.querySelectorAll('[data-id]').forEach((el) => {
+    el.onclick = () => {
+      selected = journal.instruments.find((x) => x.id === el.dataset.id)
+      if (selected) openDetail(selected)
+    }
+  })
+}
+
+function cardHtml(inst) {
+  const st = getStatus(inst)
+  const tone = st.status === 'overdue' ? 'overdue' : st.status === 'soon' ? 'soon' : st.status === 'ok' ? 'ok' : 'na'
+  return `
+    <button type="button" class="inst ${st.status === 'overdue' ? 'overdue' : ''}" data-id="${inst.id}">
+      <div class="row" style="justify-content:space-between;align-items:flex-start">
+        <div style="min-width:0">
+          <div style="font-weight:600;font-size:15px">${esc(inst.name || 'Без названия')}</div>
+          <div class="subtle" style="font-size:13px;margin-top:2px">${esc(inst.serial || 'б/н')}${inst.type ? ' · ' + esc(inst.type) : ''}</div>
+        </div>
+        <span class="badge badge-${tone}">${statusLabel(st.status, inst.checkKind)}</span>
+      </div>
+      <div class="muted" style="font-size:13px;margin-top:8px">${esc(inst.location || 'Место не указано')}${inst.sheet ? ' · ' + esc(inst.sheet) : ''}</div>
+      <div style="font-size:13px;margin-top:6px;${st.status === 'overdue' ? 'color:var(--danger);font-weight:600' : 'color:var(--subtle)'}">
+        ${st.status === 'na' ? 'Срок не контролируется' : inst.lastCheck ? `${esc(inst.lastCheck)} · ${st.label}` : 'Дата поверки не указана'}
+      </div>
+    </button>`
+}
+
+function openDetail(inst) {
+  const edit = { ...inst }
+  const fields = [
+    ['name', 'Наименование'], ['type', 'Тип'], ['serial', 'Заводской номер'],
+    ['year', 'Год выпуска'], ['range', 'Диапазон'], ['accuracyClass', 'Класс'],
+    ['location', 'Место установки'], ['object', 'Объект'], ['shop', 'Цех'],
+    ['unit', 'Установка'], ['lastCheck', 'Дата поверки / калибровки'],
+    ['checkKind', 'П / К'], ['note', 'Примечание'], ['sheet', 'Лист'],
+  ]
+  const st = getStatus(edit)
+  const bg = document.createElement('div')
+  bg.className = 'modal-bg'
+  bg.innerHTML = `
+    <div class="modal">
+      <div class="row" style="justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div style="font-weight:700;font-size:17px">${esc(edit.name || 'СИ')}</div>
+          <div class="subtle" style="font-size:13px">${esc(edit.serial || 'б/н')}</div>
+        </div>
+        <span class="badge badge-${st.status === 'overdue' ? 'overdue' : st.status === 'soon' ? 'soon' : st.status === 'ok' ? 'ok' : 'na'}">${statusLabel(st.status, edit.checkKind)}</span>
+      </div>
+      <div class="stack" id="fields">
+        ${fields.map(([k, lab]) => `
+          <div><label class="label">${lab}</label>
+          <input class="input" data-k="${k}" value="${esc(String(edit[k] ?? ''))}" /></div>`).join('')}
+        <div><label class="label">Интервал, мес.</label>
+          <input class="input" data-k="intervalMonths" type="number" value="${edit.intervalMonths ?? ''}" /></div>
+      </div>
+      <div style="margin-top:16px;text-align:center">
+        <canvas id="qr-canvas" width="180" height="180"></canvas>
+        <div class="subtle" style="font-size:12px;margin-top:6px">QR для наклейки</div>
+      </div>
+      <div class="stack" style="margin-top:16px">
+        <button type="button" class="btn btn-primary btn-block" id="d-save">Сохранить</button>
+        <button type="button" class="btn btn-sec btn-block" id="d-close">Закрыть</button>
+        <button type="button" class="btn btn-danger btn-block" id="d-del">Удалить СИ</button>
+      </div>
+    </div>`
+  document.body.appendChild(bg)
+  bg.onclick = (e) => { if (e.target === bg) bg.remove() }
+  $('#d-close', bg).onclick = () => bg.remove()
+
+  // QR via qrcode lib if present, else text
+  drawQr($('#qr-canvas', bg), instrumentToQr(edit))
+
+  $('#d-save', bg).onclick = async () => {
+    const next = { ...edit }
+    bg.querySelectorAll('[data-k]').forEach((inp) => {
+      const k = inp.dataset.k
+      if (k === 'intervalMonths') next[k] = inp.value === '' ? null : Number(inp.value)
+      else next[k] = inp.value
+    })
+    if (!next.intervalMonths && next.name) next.intervalMonths = defaultIntervalMonths(next.name)
+    const changes = diffInst(inst, next)
+    const idx = journal.instruments.findIndex((x) => x.id === inst.id)
+    if (idx >= 0) journal.instruments[idx] = next
+    for (const c of changes) {
+      addAudit(journal, session, {
+        action: 'update',
+        instrumentId: next.id,
+        serial: next.serial,
+        field: c.field,
+        oldValue: c.oldValue,
+        newValue: c.newValue,
+      })
+    }
+    saveLocal(journal)
+    await tryPush()
+    toast(changes.length ? 'Сохранено' : 'Без изменений')
+    bg.remove()
+    render()
+  }
+  $('#d-del', bg).onclick = async () => {
+    if (!confirm(`Удалить ${inst.serial || inst.name}?`)) return
+    journal.instruments = journal.instruments.filter((x) => x.id !== inst.id)
+    addAudit(journal, session, { action: 'delete', serial: inst.serial, oldValue: inst.name })
+    saveLocal(journal)
+    await tryPush()
+    toast('Удалено')
+    bg.remove()
+    render()
+  }
+}
+
+function drawQr(canvas, text) {
+  if (window.QRCode) {
+    // qrcode lib style
+    try {
+      window.QRCode.toCanvas(canvas, text || 'SI', { width: 180, margin: 1 })
+      return
+    } catch { /* fallthrough */ }
+  }
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = '#fff'
+  ctx.fillRect(0, 0, 180, 180)
+  ctx.fillStyle = '#1b2430'
+  ctx.font = '11px sans-serif'
+  ctx.fillText('QR: установите библиотеку', 10, 90)
+}
+
+function openScanner() {
+  const bg = document.createElement('div')
+  bg.className = 'modal-bg'
+  bg.style.alignItems = 'stretch'
+  bg.innerHTML = `
+    <div style="background:#0f172a;color:#fff;width:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;min-height:70vh;border-radius:18px 18px 0 0;padding:12px">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <strong>Сканер QR</strong>
+        <button type="button" id="sc-close" style="background:transparent;border:none;color:#fff">Закрыть</button>
+      </div>
+      <div id="qr-reader" style="width:100%;flex:1"></div>
+      <p class="subtle" style="color:#94a3b8;font-size:13px">Или введите заводской номер:</p>
+      <div class="row">
+        <input class="input" id="sc-manual" placeholder="Заводской номер" />
+        <button type="button" class="btn btn-primary" id="sc-go">Найти</button>
+      </div>
+    </div>`
+  document.body.appendChild(bg)
+  const close = () => {
+    try { scanner?.stop() } catch { /* */ }
+    bg.remove()
+  }
+  $('#sc-close', bg).onclick = close
+  let scanner
+  if (window.Html5Qrcode) {
+    scanner = new window.Html5Qrcode('qr-reader')
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 8, qrbox: { width: 240, height: 240 } },
+      (decoded) => { close(); handleQr(decoded) },
+      () => {},
+    ).catch(() => toast('Камера недоступна'))
+  }
+  $('#sc-go', bg).onclick = () => {
+    const v = $('#sc-manual', bg).value.trim()
+    if (v) { close(); handleQr(v) }
+  }
+}
+
+function handleQr(text) {
+  const parsed = parseQrPayload(text)
+  const serial = (parsed.serial || text).trim()
+  const found = journal.instruments.find(
+    (i) => i.serial && i.serial.toLowerCase() === serial.toLowerCase(),
+  )
+  if (found) {
+    openDetail(found)
+    return
+  }
+  if (confirm(`СИ «${serial}» не найдено. Добавить?`)) {
+    const loc = parsed.location || ''
+    // place near same location
+    const peers = journal.instruments.filter(
+      (i) => loc && i.location && i.location.toLowerCase() === loc.toLowerCase(),
+    )
+    const sheet = peers[0]?.sheet || sheets()[0] || 'Лист1'
+    const inst = {
+      id: crypto.randomUUID(),
+      name: parsed.name || '',
+      type: parsed.type || '',
+      serial,
+      year: parsed.year || '',
+      range: parsed.range || '',
+      accuracyClass: parsed.accuracyClass || '',
+      location: loc,
+      object: parsed.object || '',
+      shop: parsed.shop || '',
+      unit: parsed.unit || '',
+      intervalMonths: parsed.intervalMonths ?? defaultIntervalMonths(parsed.name || ''),
+      lastCheck: parsed.lastCheck || '',
+      checkKind: parsed.checkKind || '',
+      note: '',
+      sheet,
+    }
+    journal.instruments.push(inst)
+    addAudit(journal, session, { action: 'add', serial, newValue: inst.name })
+    saveLocal(journal)
+    tryPush().then(() => {
+      toast('Добавлено')
+      openDetail(inst)
+      render()
+    })
+  } else {
+    query = serial
+    render()
+  }
+}
+
+function renderHistory() {
+  const items = journal.auditLog || []
+  app.innerHTML = `
+    <div class="shell">
+      ${header('История')}
+      <div class="stack">
+        ${items.length === 0 ? '<div class="empty">Пока нет записей</div>' : items.slice(0, 300).map((e) => `
+          <div class="card" style="padding:12px">
+            <div class="row" style="justify-content:space-between">
+              <strong style="font-size:14px">${esc(e.name || e.login)}</strong>
+              <span class="subtle" style="font-size:12px">${fmtDate(e.at)}</span>
+            </div>
+            <div style="font-size:13px;margin-top:6px">${fmtAudit(e)}</div>
+          </div>`).join('')}
+      </div>
+    </div>`
+  bindHeader()
+}
+
+function fmtAudit(e) {
+  if (e.action === 'import') return esc(e.newValue || 'Импорт')
+  if (e.action === 'delete') return `Удалил СИ <strong>${esc(e.serial || e.oldValue)}</strong>`
+  if (e.action === 'add') return `Добавил СИ <strong>${esc(e.serial)}</strong>`
+  if (e.action === 'user_create') return `Создал пользователя <strong>${esc(e.newValue)}</strong>`
+  if (e.action === 'update') {
+    return `${e.serial ? `СИ <strong>${esc(e.serial)}</strong> · ` : ''}${esc(e.field)}: <span class="subtle">${esc(e.oldValue || '—')}</span> → <strong>${esc(e.newValue || '—')}</strong>`
+  }
+  return esc(e.action)
+}
+
+function renderCloud() {
+  const cfg = loadCfg()
+  app.innerHTML = `
+    <div class="shell">
+      ${header('Общая база')}
+      <div class="card stack">
+        <p class="muted" style="margin:0;font-size:14px">
+          Один токен бригады на все телефоны. Работникам аккаунт GitHub не нужен.
+        </p>
+        <div><label class="label">Владелец</label><input class="input" id="c-owner" value="${esc(cfg.owner)}" /></div>
+        <div><label class="label">Репозиторий</label><input class="input" id="c-repo" value="${esc(cfg.repo)}" /></div>
+        <div><label class="label">Ветка</label><input class="input" id="c-branch" value="${esc(cfg.branch)}" /></div>
+        <div><label class="label">Файл</label><input class="input" id="c-path" value="${esc(cfg.path)}" /></div>
+        <div><label class="label">Токен бригады (Fine-grained, Contents: Read and write)</label>
+          <input class="input" id="c-token" type="password" value="${esc(cfg.token)}" placeholder="github_pat_…" autocomplete="off" /></div>
+        <button type="button" class="btn btn-sec btn-block" id="c-save">Сохранить настройки</button>
+        <button type="button" class="btn btn-primary btn-block" id="c-push">Опубликовать на сайт</button>
+        <button type="button" class="btn btn-sec btn-block" id="c-pull">Загрузить с сайта</button>
+        <p class="subtle" style="font-size:12px;margin:0">
+          ${canWrite(cfg) ? 'Правки с этого телефона уходят в общую базу.' : 'Без токена правки остаются только на этом телефоне.'}
+br>
+          Не храните токен в файлах репозитория.
+        </p>
+      </div>
+    </div>`
+  bindHeader()
+  $('#c-save').onclick = () => {
+    saveCfg({
+      owner: $('#c-owner').value.trim(),
+      repo: $('#c-repo').value.trim(),
+      branch: $('#c-branch').value.trim() || 'main',
+      path: $('#c-path').value.trim() || 'si-journal.json',
+      token: $('#c-token').value.trim(),
+    })
+    toast('Настройки сохранены')
+    render()
+  }
+  $('#c-push').onclick = async () => {
+    try {
+      // save cfg from fields first
+      saveCfg({
+        owner: $('#c-owner').value.trim(),
+        repo: $('#c-repo').value.trim(),
+        branch: $('#c-branch').value.trim() || 'main',
+        path: $('#c-path').value.trim() || 'si-journal.json',
+        token: $('#c-token').value.trim(),
+      })
+      await syncPush(journal)
+      toast('Опубликовано')
+      render()
+    } catch (e) {
+      toast(e.message || String(e))
+    }
+  }
+  $('#c-pull').onclick = async () => {
+    try {
+      saveCfg({
+        owner: $('#c-owner').value.trim(),
+        repo: $('#c-repo').value.trim(),
+        branch: $('#c-branch').value.trim() || 'main',
+        path: $('#c-path').value.trim() || 'si-journal.json',
+        token: $('#c-token').value.trim(),
+      })
+      const { journal: j, msg } = await syncPull()
+      if (j) journal = j
+      toast(msg)
+      render()
+    } catch (e) {
+      toast(e.message || String(e))
+    }
+  }
+}
+
+function renderUsers() {
+  app.innerHTML = `
+    <div class="shell">
+      ${header('Люди')}
+      <div class="card stack" style="margin-bottom:12px">
+        <h2 style="font-size:16px">Новый работник</h2>
+        <div><label class="label">Логин</label><input class="input" id="u-login" /></div>
+        <div><label class="label">ФИО</label><input class="input" id="u-name" /></div>
+        <div><label class="label">Пароль</label><input class="input" id="u-pass" type="password" /></div>
+        <button type="button" class="btn btn-primary btn-block" id="u-add">Создать</button>
+      </div>
+      <div class="stack">
+        ${journal.users.map((u) => `
+          <div class="card" style="padding:12px">
+            <strong>${esc(u.name)}</strong>
+            <div class="subtle" style="font-size:13px">${esc(u.login)} · ${u.role === 'admin' ? 'админ' : 'работник'}</div>
+          </div>`).join('') || '<div class="empty">Нет пользователей</div>'}
+      </div>
+      <p class="muted" style="font-size:12px;margin-top:12px">После создания пользователей нажмите «База» → «Опубликовать на сайт», чтобы пароли попали на все телефоны.</p>
+    </div>`
+  bindHeader()
+  $('#u-add').onclick = async () => {
+    try {
+      await createUser(
+        journal,
+        {
+          login: $('#u-login').value.trim(),
+          name: $('#u-name').value.trim(),
+          password: $('#u-pass').value,
+          role: 'worker',
+        },
+        session,
+      )
+      journal = loadLocal()
+      toast('Пользователь создан')
+      render()
+    } catch (e) {
+      toast(e.message || String(e))
+    }
+  }
+}
+
+async function tryPush() {
+  const cfg = loadCfg()
+  if (!canWrite(cfg)) return
+  try {
+    await syncPush(journal)
+  } catch (e) {
+    toast('Локально сохранено. Публикация: ' + (e.message || e))
+  }
+}
+
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function fmtDate(iso) {
+  try {
+    const d = new Date(iso)
+    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  } catch {
+    return iso || ''
+  }
+}
+
+// boot
+scheduleAutoPull((j) => {
+  journal = j
+  if (session) render()
+})
+render()
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(function(){});
+    }
+  </script>
+</body>
 </html>
