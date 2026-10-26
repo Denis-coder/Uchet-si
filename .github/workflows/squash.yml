@@ -1,0 +1,21 @@
+name: Squash history
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  squash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.SQUASH_TOKEN != '' && secrets.SQUASH_TOKEN || github.token }}
+      - name: Оставить только актуальные файлы
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "Uchet SI"
+          git checkout --orphan fresh
+          git add -A
+          git commit -m "Снимок без старых версий"
+          git push --force origin HEAD:main
