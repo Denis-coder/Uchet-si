@@ -1,0 +1,33 @@
+name: Excel
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/**"
+  workflow_dispatch:
+concurrency:
+  group: excel-export
+  cancel-in-progress: true
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Подождать, чтобы несколько правок стали одним файлом
+        run: sleep 90
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install openpyxl
+      - run: python scripts/export_xlsx.py
+      - name: Один перезаписываемый файл Excel
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "Uchet SI"
+          git checkout --orphan excel-build
+          git reset
+          git add -f Perechen_SI.xlsx
+          git commit -m "Excel"
+          git push --force origin HEAD:excel
