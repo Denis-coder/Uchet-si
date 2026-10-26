@@ -1,4 +1,4 @@
-const VERSION = "si-pwa-v3";
+const VERSION = "si-pwa-v4";
 const PRECACHE = [
   "./",
   "./index.html",
@@ -27,6 +27,19 @@ self.addEventListener("activate", (event) => {
       .then((keys) => Promise.all(keys.filter((key) => key !== VERSION).map((key) => caches.delete(key))))
       .then(() => self.clients.claim()),
   );
+});
+
+self.addEventListener("push", (event) => {
+  let title = "Учёт СИ";
+  let body = "";
+  try {
+    const data = event.data ? event.data.json() : {};
+    title = data.title || title;
+    body = data.body || "";
+  } catch {
+    body = event.data ? event.data.text() : "";
+  }
+  event.waitUntil(self.registration.showNotification(title, { body, tag: "si-due", lang: "ru" }));
 });
 
 self.addEventListener("notificationclick", (event) => {
