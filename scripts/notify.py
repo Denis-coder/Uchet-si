@@ -71,7 +71,9 @@ def counts() -> tuple[int, int]:
     month_index = now.month - 1 + 3
     soon = now.replace(year=now.year + month_index // 12, month=month_index % 12 + 1, day=1)
     overdue = near = 0
-    for path in (meta.get("sheetFiles") or {}).values():
+    for name, path in (meta.get("sheetFiles") or {}).items():
+        if "резерв" in name.lower().replace("ё", "е"):
+            continue
         file = ROOT / path
         if not file.exists():
             continue
