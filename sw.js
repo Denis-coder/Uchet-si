@@ -1,4 +1,4 @@
-const VERSION = "si-pwa-v4";
+const VERSION = "si-pwa-v5";
 const PRECACHE = [
   "./",
   "./index.html",

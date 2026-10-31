@@ -10,9 +10,12 @@
   h2 { font-size: 13pt; margin: 14pt 0 4pt; page-break-after: avoid; }
   p, li { margin: 0 0 4pt; }
   ol, ul { margin: 0 0 6pt 18pt; padding: 0; }
+  @media print { .noprint { display: none; } }
+  .back { font: inherit; font-size: 14pt; padding: 8pt 14pt; }
 </style>
 </head>
 <body>
+<p class="noprint"><button class="back" type="button" onclick="if (history.length > 1) history.back(); else location.href='./';">← В журнал</button></p>
 <h1>Учёт СИ. Как переставлять приборы и записывать поверку</h1>
 <p>Наклейка на приборе не содержит места. В квадратике только наименование, тип, заводской номер, диапазон и класс точности. Место программа берёт из таблицы. После перестановки наклейку не меняют.</p>
 <p><b>Сканировать QR</b> — только посмотреть карточку. Место само не переписывается.</p>
