@@ -13,13 +13,42 @@ def norm(name: str) -> str:
     return name.lower().replace("ё", "е")
 
 
-def tracked(name: str) -> int | None:
+def is_state(kind: str) -> bool:
+    k = (kind or "").strip().upper()
+    return k in ("П", "P")
+
+
+def months_for(inst: dict, mode: str) -> int | None:
+    name = inst.get("name") or ""
     n = norm(name)
-    if "манометр" in n:
+    kind = inst.get("checkKind") or ""
+    if mode == "column":
+        try:
+            mpi = int(inst.get("mpiMonths") or 0)
+        except (TypeError, ValueError):
+            mpi = 0
+        if mpi > 0:
+            return mpi
+    if is_state(kind):
         return 12
-    if "термометр" in n and "биметалл" in n:
+    if "термоманометр" in n or ("манометр" in n and "манометрическ" not in n):
+        return 12
+    if "термометр" in n and ("биметалл" in n or "манометрическ" in n):
         return 24
     return None
+
+
+def due_mode(meta: dict) -> str:
+    settings = ROOT / "data" / "settings.json"
+    if settings.exists():
+        try:
+            mode = json.loads(settings.read_text(encoding="utf-8")).get("dueMode")
+            if mode in ("rules", "column"):
+                return mode
+        except json.JSONDecodeError:
+            pass
+    mode = meta.get("dueMode")
+    return mode if mode in ("rules", "column") else "rules"
 
 
 def stamp(raw: str) -> str:
@@ -67,6 +96,7 @@ def counts() -> tuple[int, int]:
     if not meta_path.exists():
         return 0, 0
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    mode = due_mode(meta)
     now = datetime.now()
     month_index = now.month - 1 + 3
     soon = now.replace(year=now.year + month_index // 12, month=month_index % 12 + 1, day=1)
@@ -78,7 +108,7 @@ def counts() -> tuple[int, int]:
         if not file.exists():
             continue
         for inst in json.loads(file.read_text(encoding="utf-8")).get("instruments") or []:
-            months = tracked(inst.get("name") or "")
+            months = months_for(inst, mode)
             if not months:
                 continue
             due = due_of(inst.get("lastCheck") or "", months)
