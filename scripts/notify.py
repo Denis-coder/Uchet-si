@@ -18,8 +18,21 @@ def is_state(kind: str) -> bool:
     return k in ("П", "P")
 
 
+def is_checked(name: str) -> bool:
+    n = norm(name)
+    if "термоманометр" in n:
+        return True
+    if "термометр" in n and ("биметалл" in n or "манометрическ" in n):
+        return True
+    if "манометр" in n and "манометрическ" not in n:
+        return True
+    return False
+
+
 def months_for(inst: dict, mode: str) -> int | None:
     name = inst.get("name") or ""
+    if not is_checked(name):
+        return None
     n = norm(name)
     kind = inst.get("checkKind") or ""
     if mode == "column":
